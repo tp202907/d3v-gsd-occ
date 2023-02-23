@@ -1,4 +1,0 @@
-SpeedPerformance.Count 1
-SpeedPerformance.Speed 17.00 kt
-SpeedPerformance.DragTotal 827.78 kN
-
