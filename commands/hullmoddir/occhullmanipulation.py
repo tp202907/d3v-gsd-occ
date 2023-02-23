@@ -25,6 +25,7 @@ draft = 8500
 precision = 35
 props_orig = GProp_GProps(gp_Pnt(0, 0, 0))
 
+
 def nurbs_surface(shape):
     if type(shape) == TopoDS_Compound:
         face_explorer = TopExp_Explorer(BRepBuilderAPI_NurbsConvert(shape).Shape(), TopAbs_FACE)
@@ -329,22 +330,6 @@ def get_station_curve_gp_points(shape):
     return pnts_on_station
 
 
-'''def station_areas(shape):
-    stations = get_station_curve_gp_points(shape)
-    station_coord_y = {}
-    station_coord_z = {}
-    areas = []
-    for station, coords in stations.items():
-        station_coord_y[station] = []
-        station_coord_z[station] = []
-        for point in coords:
-            station_coord_y[station] += [point.Y()]
-            station_coord_z[station] += [point.Z()]
-    for y, z in zip(station_coord_y.values(), station_coord_z.values()):
-        areas += [abs(np.around(2 * sci.integrate.simps(y, z), 3))]
-    return areas'''
-
-
 def station_areas(shape):
     areas = []
     sub_faces = get_sections(shape)
@@ -354,19 +339,6 @@ def station_areas(shape):
     return areas
 
 
-'''def coord_x(shape, station_starts='aft'):
-    """Return a list with x coordinates of the stations"""
-    stations = get_station_curve_gp_points(shape)
-    coords_x = []
-    for station, coords in stations.items():
-        for point in coords:
-            coords_x += [np.around(point.X(), 2)]
-            coords_x = list(dict.fromkeys(coords_x))
-    if station_starts == 'fore':
-        coords_x.sort(reverse=True)
-    return coords_x'''
-
-
 def coord_x(shape):
     coords_x = []
     sub_faces = get_sections(shape)
@@ -374,15 +346,6 @@ def coord_x(shape):
         brepgprop_SurfaceProperties(face, props_orig)
         coords_x.append(props_orig.CentreOfMass().X())
     return coords_x
-
-
-'''def volume(shape):
-    coords_x = coord_x(shape)
-    areas = station_areas(shape)
-    # coords_x.sort()
-    # areas.sort()
-    vol = np.abs(np.around(sci.integrate.simps(areas, coords_x), 3))
-    return vol'''
 
 
 def volume(shape):
@@ -519,92 +482,10 @@ def set_new_coordx(shape):
     return new_stations
 
 
-'''def water_plane_area(shape):
-    water_plane = Geom_Plane(gp_Pnt(0, 0, draft), gp_Dir(0, 0, 1))
-    water_plane_section = BRepAlgoAPI_Section(shape, water_plane, True).Shape()
-    water_plane_explorer = TopExp_Explorer(water_plane_section, TopAbs_EDGE)
-    wire = BRepBuilderAPI_MakeWire()
-    while water_plane_explorer.More():
-        wire.Add(water_plane_explorer.Current())
-        if not wire.IsDone():
-            edge_explorer = TopExp_Explorer(wire.Edge(), TopAbs_VERTEX)
-            while edge_explorer.More():
-                last_vert = edge_explorer.Current()
-                edge_explorer.Next()
-            vertex_explorer = TopExp_Explorer(water_plane_explorer.Current(), TopAbs_VERTEX)
-            new_edge = BRepBuilderAPI_MakeEdge(last_vert, vertex_explorer.Current())
-            wire.Add(new_edge.Edge())
-            wire.Add(water_plane_explorer.Current())
-        water_plane_explorer.Next()
-    water_plane_curve = wire.Wire()
-    edge_wl_explorer = TopExp_Explorer(water_plane_curve, TopAbs_EDGE)
-    composite_curve_builder = GeomConvert_CompCurveToBSplineCurve()
-    while edge_wl_explorer.More():
-        # getting the edge from the iterator
-        edge = topods_Edge(edge_wl_explorer.Current())
-
-        # edge can be joined only if it is not degenerated (zero length)
-        if BRep_Tool.Degenerated(edge):
-            edge_wl_explorer.Next()
-            continue
-
-        # the edge must be converted to Nurbs edge
-        nurbs_converter = BRepBuilderAPI_NurbsConvert(edge)
-        nurbs_converter.Perform(edge)
-        nurbs_edge = topods_Edge(nurbs_converter.Shape())
-
-        # here we extract the underlying curve from the Nurbs edge
-        nurbs_curve = BRep_Tool_Curve(nurbs_edge)[0]
-
-        # we convert the Nurbs curve to Bspline curve
-        bspline_curve = geomconvert_CurveToBSplineCurve(nurbs_curve)
-
-        # we can now add the Bspline curve to the composite wire curve
-        composite_curve_builder.Add(bspline_curve, 1e-3)
-        edge_wl_explorer.Next()
-
-    # GeomCurve obtained by the builder after edges are joined
-    nurbs = composite_curve_builder.BSplineCurve()
-    pnt_list = []
-    pnts = []
-    for points in nurbs.Poles():
-        pnt_list.append(points)
-    pnts.append(pnt_list)
-    proj_curv = []
-    for i in pnt_list:
-        proj_curv.append(GeomAPI_ProjectPointOnCurve(i, nurbs))
-
-    pnts_on_water_plane = []
-    for proj in proj_curv:
-        pnts_on_water_plane.append(proj.Point(1))
-    n_pnts = 32 - 2
-    step = round(len(pnts_on_water_plane) / n_pnts)
-    pnts_water_plane = [pnts_on_water_plane[0]] + [pnts_on_water_plane[i] for i in
-                                                   list(range(1, len(pnts_on_water_plane), step))] + [
-                           pnts_on_water_plane[-1]]
-    x = [coord.X() for coord in pnts_water_plane]
-    y = [coord.Y() for coord in pnts_water_plane]
-    wp_area = 2 * abs(sci.integrate.simps(y, x))
-    return wp_area'''
-
-
 def water_plane_area(shape):
     bwl_list = stations_bwl(shape)
     coords_x = coord_x(shape)
     return sci.integrate.simps(bwl_list, coords_x)
-
-
-'''def stations_bwl(shape):
-    stations = get_station_curve_gp_points(shape)
-    bwl_list = []
-    station_coord_y = {}
-    for station, coords in stations.items():
-        station_coord_y[station] = []
-        for point in coords:
-            station_coord_y[station] += [point.Y()]
-            bwl = max(station_coord_y[station])
-        bwl_list += [2 * bwl]
-    return bwl_list'''
 
 
 def stations_bwl(shape):
@@ -617,146 +498,6 @@ def stations_bwl(shape):
         bwl_list.append(2 * bbox_face.Get()[4])
     return bwl_list
 
-'''
-def stations_bwl(shape):
-    water_plane = Geom_Plane(gp_Pnt(0, 0, draft), gp_Dir(0, 0, 1))
-    water_plane_section = BRepAlgoAPI_Section(shape, water_plane, True).Shape()
-    water_plane_explorer = TopExp_Explorer(water_plane_section, TopAbs_EDGE)
-    wire = BRepBuilderAPI_MakeWire()
-    while water_plane_explorer.More():
-        wire.Add(water_plane_explorer.Current())
-        if not wire.IsDone():
-            edge_explorer = TopExp_Explorer(wire.Edge(), TopAbs_VERTEX)
-            while edge_explorer.More():
-                last_vert = edge_explorer.Current()
-                edge_explorer.Next()
-            vertex_explorer = TopExp_Explorer(water_plane_explorer.Current(), TopAbs_VERTEX)
-            new_edge = BRepBuilderAPI_MakeEdge(last_vert, vertex_explorer.Current())
-            wire.Add(new_edge.Edge())
-            wire.Add(water_plane_explorer.Current())
-        water_plane_explorer.Next()
-    water_plane_curve = wire.Wire()
-    edge_wl_explorer = TopExp_Explorer(water_plane_curve, TopAbs_EDGE)
-    composite_curve_builder = GeomConvert_CompCurveToBSplineCurve()
-    while edge_wl_explorer.More():
-        # getting the edge from the iterator
-        edge = topods_Edge(edge_wl_explorer.Current())
-
-        # edge can be joined only if it is not degenerated (zero length)
-        if BRep_Tool.Degenerated(edge):
-            edge_wl_explorer.Next()
-            continue
-
-        # the edge must be converted to Nurbs edge
-        nurbs_converter = BRepBuilderAPI_NurbsConvert(edge)
-        nurbs_converter.Perform(edge)
-        nurbs_edge = topods_Edge(nurbs_converter.Shape())
-
-        # here we extract the underlying curve from the Nurbs edge
-        nurbs_curve = BRep_Tool_Curve(nurbs_edge)[0]
-
-        # we convert the Nurbs curve to Bspline curve
-        bspline_curve = geomconvert_CurveToBSplineCurve(nurbs_curve)
-
-        # we can now add the Bspline curve to the composite wire curve
-        composite_curve_builder.Add(bspline_curve, 1e-3)
-        edge_wl_explorer.Next()
-
-    # GeomCurve obtained by the builder after edges are joined
-    nurbs = composite_curve_builder.BSplineCurve()
-    pnt_list = []
-    pnts = []
-    for points in nurbs.Poles():
-        pnt_list.append(points)
-    pnts.append(pnt_list)
-    proj_curv = []
-    for i in pnt_list:
-        proj_curv.append(GeomAPI_ProjectPointOnCurve(i, nurbs))
-
-    pnts_on_water_plane = []
-    for proj in proj_curv:
-        pnts_on_water_plane.append(proj.Point(1))
-    n_pnts = precision
-    step = round(len(pnts_on_water_plane) / n_pnts)
-    pnts_water_plane = [pnts_on_water_plane[0]] + [pnts_on_water_plane[i] for i in
-                                                   list(range(1, len(pnts_on_water_plane), step))] + [
-                           pnts_on_water_plane[-1]]
-    y = [coord.Y() for coord in pnts_water_plane]
-    return y
-'''
-
-
-'''def metacentric_radius(shape):
-    water_plane = Geom_Plane(gp_Pnt(0, 0, draft), gp_Dir(0, 0, 1))
-    water_plane_section = BRepAlgoAPI_Section(shape, water_plane, True).Shape()
-    water_plane_explorer = TopExp_Explorer(water_plane_section, TopAbs_EDGE)
-    wire = BRepBuilderAPI_MakeWire()
-    while water_plane_explorer.More():
-        wire.Add(water_plane_explorer.Current())
-        if not wire.IsDone():
-            edge_explorer = TopExp_Explorer(wire.Edge(), TopAbs_VERTEX)
-            while edge_explorer.More():
-                last_vert = edge_explorer.Current()
-                edge_explorer.Next()
-            vertex_explorer = TopExp_Explorer(water_plane_explorer.Current(), TopAbs_VERTEX)
-            new_edge = BRepBuilderAPI_MakeEdge(last_vert, vertex_explorer.Current())
-            wire.Add(new_edge.Edge())
-            wire.Add(water_plane_explorer.Current())
-        water_plane_explorer.Next()
-    water_plane_curve = wire.Wire()
-    edge_wl_explorer = TopExp_Explorer(water_plane_curve, TopAbs_EDGE)
-    composite_curve_builder = GeomConvert_CompCurveToBSplineCurve()
-    while edge_wl_explorer.More():
-        # getting the edge from the iterator
-        edge = topods_Edge(edge_wl_explorer.Current())
-
-        # edge can be joined only if it is not degenerated (zero length)
-        if BRep_Tool.Degenerated(edge):
-            edge_wl_explorer.Next()
-            continue
-
-        # the edge must be converted to Nurbs edge
-        nurbs_converter = BRepBuilderAPI_NurbsConvert(edge)
-        nurbs_converter.Perform(edge)
-        nurbs_edge = topods_Edge(nurbs_converter.Shape())
-
-        # here we extract the underlying curve from the Nurbs edge
-        nurbs_curve = BRep_Tool_Curve(nurbs_edge)[0]
-
-        # we convert the Nurbs curve to Bspline curve
-        bspline_curve = geomconvert_CurveToBSplineCurve(nurbs_curve)
-
-        # we can now add the Bspline curve to the composite wire curve
-        composite_curve_builder.Add(bspline_curve, 1e-3)
-        edge_wl_explorer.Next()
-
-    # GeomCurve obtained by the builder after edges are joined
-    nurbs = composite_curve_builder.BSplineCurve()
-    pnt_list = []
-    pnts = []
-    for points in nurbs.Poles():
-        pnt_list.append(points)
-    pnts.append(pnt_list)
-    proj_curv = []
-    for i in pnt_list:
-        proj_curv.append(GeomAPI_ProjectPointOnCurve(i, nurbs))
-
-    pnts_on_water_plane = []
-    for proj in proj_curv:
-        pnts_on_water_plane.append(proj.Point(1))
-    n_pnts = 32 - 2
-    step = round(len(pnts_on_water_plane) / n_pnts)
-    pnts_water_plane = [pnts_on_water_plane[0]] + [pnts_on_water_plane[i] for i in
-                                                   list(range(1, len(pnts_on_water_plane), step))] + [
-                           pnts_on_water_plane[-1]]
-    x = [coord.X() for coord in pnts_water_plane]
-    y = [coord.Y() for coord in pnts_water_plane]
-    i_xx = 0  # inertia in around x-axis
-    for ind in range(len(y)):
-        if ind > 0:
-            i_xx += ((x[ind] - x[ind - 1]) * (y[ind] + y[ind - 1]) ** 3) / 12
-    return i_xx / volume(shape)'''
-
 
 def metacentric_radius(shape):
     x_axis = gp_Ax1(gp_Pnt(0, 0, 0), gp_Dir(1, 0, 0))
@@ -765,37 +506,7 @@ def metacentric_radius(shape):
     for face in sub_faces:
         brepgprop_SurfaceProperties(face, props_orig)
         i_xx.append(props_orig.MomentOfInertia(x_axis))
-    return sum(i_xx)/volume(shape)
-
-'''def vertical_center_buoyancy(shape):
-    stations = get_station_curve_gp_points(shape)
-    station_coord_x = {}
-    station_coord_y = {}
-    station_coord_z = {}
-    areas = []
-    for station, coords in stations.items():
-        station_coord_x[station] = []
-        station_coord_y[station] = []
-        station_coord_z[station] = []
-        for point in coords:
-            station_coord_x[station] += [point.X()]
-            station_coord_y[station] += [point.Y()]
-            station_coord_z[station] += [point.Z()]
-    # for y, z in zip(station_coord_y.values(), station_coord_z.values()):
-    #     areas += [np.around(2 * sci.integrate.simps(y, z), 3)]
-    list_y = list(station_coord_y.values())
-    list_z = list(station_coord_z.values())
-    moment_y = []  # moment in relation to y-axis
-    for y, z in zip(list_y, list_z):
-        moment_y_station = 0
-        for ind in range(len(y)):
-            if ind > 0:
-                moment_y_station += ((z[ind] - z[ind - 1]) * ((y[ind] + y[ind - 1]) / 2)) * (
-                        z[ind - 1] + (z[ind] - z[ind - 1]) / 2)
-        moment_y.append(moment_y_station)
-    x_coord = coord_x(shape)
-    vcb = np.around(sci.integrate.simps(moment_y, x_coord) / (0.5 * volume(shape)), 3)
-    return vcb'''
+    return sum(i_xx) / volume(shape)
 
 
 def vertical_center_buoyancy(shape):
@@ -804,36 +515,6 @@ def vertical_center_buoyancy(shape):
     static_mom = [area * z for area, z in zip(areas, zb_list)]
     coords_x = coord_x(shape)
     return sci.integrate.simps(static_mom, coords_x) / volume(shape)
-
-
-'''def stations_vertical_center_buoyancy(shape):
-    stations = get_station_curve_gp_points(shape)
-    station_coord_x = {}
-    station_coord_y = {}
-    station_coord_z = {}
-    areas = []
-    for station, coords in stations.items():
-        station_coord_x[station] = []
-        station_coord_y[station] = []
-        station_coord_z[station] = []
-        for point in coords:
-            station_coord_x[station] += [point.X()]
-            station_coord_y[station] += [point.Y()]
-            station_coord_z[station] += [point.Z()]
-    for y, z in zip(station_coord_y.values(), station_coord_z.values()):
-        areas += [np.around(2 * sci.integrate.simps(y, z), 3)]
-    list_y = list(station_coord_y.values())
-    list_z = list(station_coord_z.values())
-    moment_y = []  # moment in relation to y-axis
-    for y, z in zip(list_y, list_z):
-        moment_y_station = 0
-        for ind in range(len(y)):
-            if ind > 0:
-                moment_y_station += ((z[ind] - z[ind - 1]) * ((y[ind] + y[ind - 1]) / 2)) * (
-                        z[ind - 1] + (z[ind] - z[ind - 1]) / 2)
-        moment_y.append(moment_y_station)
-    zb_stations = [moment / area for moment, area in zip(moment_y, areas)]
-    return zb_stations'''
 
 
 def stations_vertical_center_buoyancy(shape):

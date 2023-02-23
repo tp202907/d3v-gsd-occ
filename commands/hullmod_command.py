@@ -1,17 +1,9 @@
 import os.path
+from typing import List
 
-from PySide6.QtWidgets import QApplication, QMenu, QFormLayout, QWidget, QHeaderView, QSlider, QLineEdit
-from PySide6.QtWidgets import QDialog, QPushButton, QGridLayout, QVBoxLayout, QHBoxLayout, QTableView, QTextEdit, QLabel
-from PySide6.QtCore import Slot, Qt, QMetaObject, QCoreApplication
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, QRect
-from PySide6.QtGui import QColor, QPainter
-# from PySide6.QtCharts import QtCharts
-from PySide6.QtWidgets import QFileDialog, QDialogButtonBox, QProgressDialog, QMenuBar
-from PySide6.QtCore import SIGNAL, SLOT
-from typing import Dict, List
-from uuid import uuid4
-import numpy as np
-import hullformdir.hullgeneratorform
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QApplication, QMenu
+from PySide6.QtWidgets import QMenuBar
 
 try:
     # d3v imports
@@ -110,6 +102,7 @@ class HullmodCommand(Command):
     def onFullScale(self):
         if isinstance(self.hfcom.active_hull_form, OCCHullform):
             self.hfcom.active_hull_form.full_scale()
+
     def onSectionCurves(self):
         if isinstance(self.hfcom.active_hull_form, OCCHullform):
             self.hfcom.active_hull_form.cross_section_curves()
@@ -183,10 +176,10 @@ class HullmodImporter(IOHandler):
         pass
 
     def getExportFormats(self):
-        return (".hoc", ".igs")
+        return ".hoc", ".igs"
 
     def getImportFormats(self):
-        return (".hoc", ".igs")
+        return ".hoc", ".igs"
 
 
 def createCommand():

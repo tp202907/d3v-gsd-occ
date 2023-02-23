@@ -1,22 +1,23 @@
-import numpy as np
-from optbase import AnalysisExecutor, OptimizationProblem, SingleobjectiveOptimizationOutput,ConstrType
-from optbase import NdArrayGetConnector
-from optbase import DesignVariable, DesignConstraint, DesignObjective, NdArrayGetSetConnector, NdArrayGetConnector
-from optlib_scipy import ScipyOptimizationAlgorithm
-from optlib_pymoo_proto import PymooOptimizationAlgorithmMulti, PymooOptimizationAlgorithmSingle
-from optbase import AnalysisResultType, BasicGetSetConnector, BasicGetConnector
-from OCC.Core.GeomAPI import GeomAPI_ProjectPointOnSurf
 from itertools import product
-from hullmoddir.occhullform import OCCHullform
-from geometry_extend import GeometryExtension
+
+import numpy as np
 import openmesh as om
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeFace
-from OCC.Display.SimpleGui import init_display
+from OCC.Core.GeomAPI import GeomAPI_ProjectPointOnSurf
+
+from geometry_extend import GeometryExtension
+from hullmoddir.occhullform import OCCHullform
+from optbase import AnalysisExecutor, OptimizationProblem, SingleobjectiveOptimizationOutput, ConstrType
+from optbase import AnalysisResultType, BasicGetSetConnector, BasicGetConnector
+from optbase import DesignVariable, DesignConstraint, DesignObjective, NdArrayGetConnector
+from optlib_pymoo_proto import PymooOptimizationAlgorithmSingle
+from optlib_scipy import ScipyOptimizationAlgorithm
 
 
 class CallbackPoleXGetSetConnector(BasicGetSetConnector):
 
     def __init__(self, pole):
+        super().__init__()
         self._pole = pole
 
     @property
@@ -33,6 +34,7 @@ class CallbackPoleXGetSetConnector(BasicGetSetConnector):
 class CallbackPoleXGetConnector(BasicGetSetConnector):
 
     def __init__(self, pole):
+        super().__init__()
         self._pole = pole
 
     @property
@@ -45,7 +47,7 @@ class PoleXDiffGetCallbackConnector(BasicGetConnector):
     """Class used to connect and normalize objective functions and such."""
 
     def __init__(self, prev_pole, pole):
-        pass
+        super().__init__()
         self._prev_pole = prev_pole
         self._pole = pole
 
@@ -59,7 +61,7 @@ class SurfDistGetCallbackConnector(BasicGetConnector):
     """Class used to connect and normalize objective functions and such."""
 
     def __init__(self, dist):
-        pass
+        super().__init__()
         self._dist = dist
 
     @property
@@ -87,16 +89,8 @@ class OCCHullForm_SurfaceFitCurves_Analysis(AnalysisExecutor):
             pole = self.nurbs_surface.Pole(u + 1, v + 1)
             self.poles.append(pole)
         self._sum_sqr = self.calc_SumSqr_arrays()
-        # for station, coords in self.new_stations.items():
-        #    station_list = list(self.new_stations.keys())
-        #    ind = station_list.index(station)
-        #    new_x = self.new_coords_x[ind]
-        #    for x in coords:
-        #        x.SetX(new_x)
 
     def analyze(self):
-        # display, start_display, add_menu, add_function_to_menu = init_display()
-        # display.DisplayShape(self.nurbs_surface, update=True, color='red')
         n_poles_u = self.nurbs_surface.NbUPoles()
         n_poles_v = self.nurbs_surface.NbVPoles()
         pole_ids = product(range(n_poles_u), range(n_poles_v))
@@ -104,10 +98,6 @@ class OCCHullForm_SurfaceFitCurves_Analysis(AnalysisExecutor):
             if pole_id > n_poles_v - 1:
                 pole = self.poles[pole_id]
                 self.nurbs_surface.SetPole(u + 1, v + 1, pole)
-                # print(pole_id, pole.X())
-        # print('Analysis called, dist =', self.dists())
-        # display.DisplayShape(self.nurbs_surface, update=True, color='black')
-        # start_display()
         self.calc_SumSqr_arrays(self._sum_sqr)
         print('Analysis called -1, dist =', self._sum_sqr[self._sum_sqr.size-1])
 
@@ -158,27 +148,7 @@ class OCCHullForm_SurfaceFitCurves_Analysis(AnalysisExecutor):
             i += 1
             count += 1
         out_ss_array[i] = distance
-        # display, start_display, add_menu, add_function_to_menu = init_display()
-        # display.DisplayShape(self.nurbs_surface, update=True, color='red')
-        # for lists in pnt_list:
-        #     for p in lists:
-        #         display.DisplayShape(p, update=True, color='black')
-        # for st, coord in self.new_stations_opt.items():
-        #     for pnt in coord:
-        #         display.DisplayShape(pnt, update=True, color='black')
-        # start_display()
         return out_ss_array
-
-    # def surf(self):
-    #     surface = self.nurbs_surface
-    #     n_poles_u = surface.NbUPoles()
-    #     n_poles_v = surface.NbVPoles()
-    #     pole_ids = product(range(n_poles_u), range(n_poles_v))
-    #     for pole_id, (u, v) in enumerate(pole_ids):
-    #         if pole_id > n_poles_v - 1:
-    #             pole = self.poles[pole_id]
-    #             surface.SetPole(u + 1, v + 1, pole)
-    #     return surface
 
 
 class OCCHullForm_SurfaceFitCurves_OptimizationProblem(OptimizationProblem):
@@ -189,21 +159,14 @@ class OCCHullForm_SurfaceFitCurves_OptimizationProblem(OptimizationProblem):
         am = OCCHullForm_SurfaceFitCurves_Analysis(hullform)
         n_poles_u = am.nurbs_surface.NbUPoles()
         n_poles_v = am.nurbs_surface.NbVPoles()
-        # dist = am.dists()
-        # surf = am.surf()
-        # n_poles_u = surf.NbUPoles()
-        # n_poles_v = surf.NbVPoles()
         dx = am.bbox[6]
         dx_bnd = dx/25
         pole_ids = product(range(n_poles_u), range(n_poles_v))
         for pole_id, (u, v) in enumerate(pole_ids):
             if pole_id > n_poles_v - 1:
                 pole = am.poles[pole_id]
-                # am.nurbs_surface.Poles()
                 if pole.X() > 0.01 or True:
                     pole_con = CallbackPoleXGetSetConnector(pole)
-                    # lb = pole.X() * 0.9
-                    # ub = pole.X() * 1.1
                     lb = min(pole.X() * 0.9, (pole.X()-dx_bnd))
                     ub = max(pole.X() * 1.1, (pole.X()+dx_bnd))
                     if u < 9:

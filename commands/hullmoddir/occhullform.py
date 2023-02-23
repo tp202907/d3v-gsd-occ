@@ -137,7 +137,7 @@ class OCCHullform(HullForm):
 
     def regenerateHullHorm(self):
         if len(self._surfaces) > 0:
-            self.mesh = get_open_mesh_from_TopoDS_using_shape_tesselator(self._surfaces[0], mesh_quality=0.05)
+            self.mesh = get_open_mesh_from_TopoDS_using_shape_tesselator(self._surfaces[0], mesh_quality=0.1)
             self.mirror_mesh_around_symmetry_plan()
 
     def modify_form(self):
