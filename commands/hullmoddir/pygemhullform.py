@@ -100,6 +100,9 @@ def soft_merge_meshes(meshes, vh_idx_to_sync_list=None):  # meshes je lista sa m
 def move_mesh(mesh, move_vector):
     return om.TriMesh(mesh.points() + move_vector, mesh.face_vertex_indices())
 
+def test():
+    pass
+
 class ffd_maker():
     def __init__(self):
         self._ffd_volumes = {}
