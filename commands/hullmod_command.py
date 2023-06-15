@@ -2,8 +2,9 @@ import os.path
 from typing import List
 
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QApplication, QMenu
+from PySide6.QtWidgets import QApplication, QMenu, QWidget
 from PySide6.QtWidgets import QMenuBar
+
 
 try:
     # d3v imports
@@ -23,6 +24,9 @@ try:
     from hullmoddir.occhullform import OCCHullform
     from hullform_command import HullFormCommand
     import hullmoddir.optocchullform as opthf
+    # pygem
+    from hullmoddir.pygemmenus import CreateFFDBox_menu, DeformFFDBox_menu
+
 except BaseException as error:
     print('An exception occurred: {}'.format(error))
 except:
@@ -86,7 +90,25 @@ class HullmodCommand(Command):
 
         menu_PrintHydroData = self.menuOCCForm.addAction("&Hydrostatic data")
         menu_PrintHydroData.triggered.connect(self.onPrintHydroData)
+        #PyGem:
 
+        menu_CreateFFDBox = self.menuOCCForm.addAction("&Create FFD Box")
+        menu_CreateFFDBox.triggered.connect(self.onCreateFDDBox)
+
+        menu_FFDDeform = self.menuOCCForm.addAction("&FDD Deform")
+        menu_FFDDeform.triggered.connect(self.onFDDDeform)
+
+
+
+    def onCreateFDDBox(self):
+        if isinstance(self.hfcom.active_hull_form, OCCHullform):
+            self.Box_creation_menu = CreateFFDBox_menu(self.hfcom.active_hull_form)
+            self.Box_creation_menu.show_window()
+
+    def onFDDDeform(self):
+        if isinstance(self.hfcom.active_hull_form, OCCHullform):
+            self.Box_deform_menu = DeformFFDBox_menu(self.hfcom.active_hull_form)
+            self.Box_deform_menu.show_window()
     def onPrintHydroData(self):
         if isinstance(self.hfcom.active_hull_form, OCCHullform):
             self.hfcom.active_hull_form.printing_values()
