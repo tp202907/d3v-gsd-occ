@@ -122,7 +122,7 @@ class HullmodCommand(Command):
     def on_calc_resistance(self):
         calc = michell_resitance(self.hfcom.active_hull_form, 10)
         print(calc.wave_resistance())
-        print(calc.n_calls)
+        # print(calc.n_calls)
         # calc.test_intersection()
 
     def onCreateFDDBox(self):

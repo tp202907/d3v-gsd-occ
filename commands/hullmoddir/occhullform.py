@@ -101,8 +101,8 @@ class OCCHullform(HullForm, PyGemHullform):
         self.regenerateHullHorm()
         self.calc_ship_dims()
         # self.position_form(x_offset = 0.1)
-        self.position_form(x_offset = 0)
-
+        # self.position_form(x_offset = 0)
+        # self.matplotlib_visualise_mesh()
         # self.calc_ship_dims()
 
         # self.make_ffd_volume(box_center = np.array([50000,6000,3000]), box_length = np.array([5000,5000,5000]), n_control_points = [3,3,3])
@@ -122,7 +122,7 @@ class OCCHullform(HullForm, PyGemHullform):
         self.B = (np.max(y) - np.min(y)) #/1000
         self.H = (np.max(z) - np.min(z)) #/ 1000
         self.T = self.H * 0.75 #/ 1000   #0.75 je procijena gaza
-
+        print(self.bbox.minCoord,self.bbox.maxCoord)
 
     def new_coords_x(self):
         return occhm.lackenby(self._surfaces[0], delta_cp=0.15, delta_p=0.2, station_starts='aft')
@@ -172,10 +172,27 @@ class OCCHullform(HullForm, PyGemHullform):
         if n_surfaces > 0:
             meshes = []
             for surf in self._surfaces:
-                meshes.append(get_open_mesh_from_TopoDS_using_shape_tesselator(surf, mesh_quality=0.2))
+                meshes.append(get_open_mesh_from_TopoDS_using_shape_tesselator(surf, mesh_quality=0.1))
             if n_surfaces > 1:  #n of meshes and n of surfaces is the same
                 self.mesh = soft_merge_meshes(meshes)
-            self.miror_mesh_around_simetry_plan()
+            # self.miror_mesh_around_simetry_plan()
+
+        # mesh = self.mesh
+        # points = mesh.points()
+        # fvi = mesh.face_vertex_indices()
+        # tp = points[fvi]
+        # normals = np.cross(tp[:, 1] - tp[:, 0], tp[:, 2] - tp[:, 0])
+        # tp_centroid = tp.sum(1) / 3
+        # rc = np.array([0,0,0.25])
+        # x = tp_centroid - rc.reshape(1,-1)
+        # signed_normals = (x*normals).sum(-1)
+        # bool = signed_normals > 0
+        # # print(bool)
+        # new_fvi = np.delete(fvi, ~bool, 0)
+        # new_mesh = om.TriMesh(points, new_fvi)
+        # self.mesh = new_mesh
+        # self.emit_geometries_rebuild()
+        # print(self.bbox.minCoord, self.bbox.maxCoord)
 
     def modify_form(self):
         # do some change with poles

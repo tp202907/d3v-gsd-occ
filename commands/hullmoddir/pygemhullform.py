@@ -173,6 +173,15 @@ def hard_merge_meshes(meshes, vh_idx_to_sync_list=None):  # vh_idx_to_sync_list 
 def move_mesh(mesh, move_vector):
     return om.TriMesh(mesh.points() + move_vector, mesh.face_vertex_indices())
 
+def is_mesh_closed(mesh):  # for use in dbb.py
+    ffi = mesh.face_face_indices()
+    if ffi.shape[1] <= 2:  # if all faces are only connected to 2 or less other faces, mesh i not closed by default
+        return False
+    if (ffi == -1).any():
+        return False
+    else:
+        return True
+
 class ffd_maker():
     def __init__(self):
         self._ffd_volumes = {}
@@ -236,9 +245,108 @@ class PyGemHullform(ffd_maker):
 
 
 
+    def matplotlib_visualise_mesh(self):
+        import matplotlib.pyplot as plt
+        ax = plt.figure().add_subplot(projection='3d')
+        # plt.xlim(-self.L/2, self.L/2)
+        # plt.ylim(-self.L/2, self.L/2)
+        # plt.autoscale(False)
+        mesh = self.mesh
+        points = mesh.points()
+        fvi = mesh.face_vertex_indices()
+        tp = points[fvi]
+
+        test_tp = np.array([[[0,1,2],[3,4,5],[6,7,8]],[[0,1,6],[3,4,5],[6,7,8]],[[0,1,2],[3,4,5],[6,7,8]]])
+
+        # tp_bool = np.isclose(np.expand_dims(tp,0), np.expand_dims(tp,1)).all(-1).all(-1)
+        # tp_bool = np.tril(tp_bool)
+        # diag_ind = np.diag_indices(tp_bool.shape[0])
+        # tp_bool[diag_ind] = False
+
+
+        # print(tp_bool.any())      #nema conincidentnih tocaka
+
+
+        normals = np.cross(tp[:, 1] - tp[:, 0], tp[:, 2] - tp[:, 0])
+        normal_len = np.expand_dims(((normals ** 2).sum(-1)) ** 0.5, -1)  # normal lenghts
+        normals = (normals / normal_len) * 0.2  # unit vectors
+        # print(np.expand_dims(tp[:,0],0))
+        tp_centroid = tp.sum(1)/3
+        plot_tp = np.append(tp, np.expand_dims(tp[:,0],1),1)
+        # print(plot_tp)
+
+
+        #
+        # tp_centroid = tp_centroid[0:10]
+        # ax.scatter(tp_centroid[:,0],tp_centroid[:,1],tp_centroid[:,2], c = "red")
+
+        # rc = np.array([self.L/2,self.B/2,self.H/2])
+        rc = np.array([0,0,self.H/2])
+        ax.scatter(rc[0],rc[1],rc[2], c = "green")
+        x = tp_centroid - rc.reshape(1,-1)
+        signed_normals = (x*normals).sum(-1)
+        bool = signed_normals > 0
+
+        normals = np.append(np.expand_dims(tp_centroid, 1), np.expand_dims(tp_centroid + normals, 1), 1)
+
+        good_normals = copy(normals)
+        good_normals[~bool] = np.array([[0,0,0],[0,0,0]])
+
+        bad_normals = copy(normals)
+        bad_normals[bool] = np.array([[0, 0, 0], [0, 0, 0]])
+
+        # print(good_normals, bad_normals)
+        #
+        # ax.plot(plot_good_normals[:, 0], plot_good_normals[:, 1], plot_good_normals[:, 2], color="blue")
+        # ax.plot(plot_bad_normals[:, 0], plot_bad_normals[:, 1], plot_bad_normals[:, 2], color="red")
+
+
+        # ima losih faceva!!!!!!!!!!
+        ns = 900
+        ne = 1200
+
+        # plot_tp = np.delete(plot_tp, ~bool, 0)
+        # normals = np.delete(normals, ~bool, 0)
+        # new_fvi = np.delete(fvi, ~bool, 0)
+        # new_mesh = om.TriMesh(points, new_fvi)
+        # self._mesh = new_mesh
+        # print("new mesh !!!!!!!!!")
+        # print(is_mesh_closed(mesh))
+
+        # for t in list(plot_tp[ns:ne]):
+        #     ax.plot(t[:,0], t[:,1], t[:,2], color = "blue", linewidth=0.25)
+        #
+        # for t in list(normals[ns:ne]):
+        #     ax.plot(t[:,0], t[:,1], t[:,2], color = "green", linewidth=0.5)
+
+
+        # for t in list(bad_normals[ns:ne]):
+        #     ax.plot(t[:,0], t[:,1], t[:,2], color = "red", linewidth=1)
+        #
+        # ns = 95
+        # ne = 100
+        #
+        for t in list(plot_tp):
+            ax.plot(t[:,0], t[:,1], t[:,2], color = "blue", linewidth=0.25)
+        #
+        # for t in list(good_normals[ns:ne]):
+        #     ax.plot(t[:,0], t[:,1], t[:,2], color = "green", linewidth=1)
+
+        for t in list(bad_normals):
+            ax.plot(t[:,0], t[:,1], t[:,2], color = "red", linewidth=1)
 
 
 
+        # ax.plot(x, y, z, label='parametric curve')
+
+        # xlim = plt.xlim()
+        # max_xlim = max(map(abs, xlim))
+        # plt.xlim((-max_xlim, max_xlim))
+        # ylim = plt.ylim()
+        # max_ylim = max(map(abs, ylim))
+        # plt.ylim((-max_ylim, max_ylim))
+        ax.legend()
+        plt.show()
 
 
     def visualise_surface(self):
