@@ -5,7 +5,7 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QApplication, QMenu, QWidget
 from PySide6.QtWidgets import QMenuBar
 from hullformdir.shipstability import ShipStability
-
+from optlib_scipy import ScipyOptimizationAlgorithm
 try:
     # d3v imports
     from signals import Signals
@@ -26,6 +26,7 @@ try:
     import hullmoddir.optocchullform as opthf
     # pygem
     from hullmoddir.pygemmenus import CreateFFDBox_menu, DeformFFDBox_menu
+    from hullmoddir.pygemoptimisation import form_OptimizationProblem
     from michell_dir.michell import michell_resitance
 
 except BaseException as error:
@@ -105,25 +106,97 @@ class HullmodCommand(Command):
         menu_CalcStab = self.menuOCCForm.addAction("&Calc Stab")
         menu_CalcStab.triggered.connect(self.on_calc_stab)
 
-    def on_calc_stab(self):         #zrcalo i stvara novi mesh????
-        points = self.hfcom.active_hull_form.mesh.points()
+        menu_OptForm = self.menuOCCForm.addAction("&Optimise Form")
+        menu_OptForm.triggered.connect(self.on_Opt_Form)
+    #
+
+    def on_Opt_Form(self):
+        self.opt = form_OptimizationProblem(Hullform=self.hfcom.active_hull_form)
+        #
+        opt_ctrl = {}
+        self.opt.opt_algorithm = ScipyOptimizationAlgorithm('SLSQP_mi=1000', 'SLSQP', opt_ctrl)
+        res = self.opt.optimize()
+        self.opt.print_output()
+        self.hfcom.active_hull_form.visualise_surface()
+
+
+        # hullform = self.hfcom.active_hull_form
+        # calc = michell_resitance(self.hfcom.active_hull_form)
+        # data1 = calc.wave_resistance(3.5)
+        # print(data1)                                                                                    #(5.357551808216177, 0.0013889292068666674)
+        # #                                                                                         # 0.17743882099421268 [-4.58088043e-04  2.34463456e-05  1.56304175e-01]
+        # self.hfcom.active_hull_form.calc_stab()
+        # print(self.hfcom.active_hull_form.displacement,self.hfcom.active_hull_form.displacementCG)
+        #
+        #
+        # hullform.make_form_ffd_cage([0,0,0])
+        # hullform.move_form_ffd_row(5,0)
+        # hullform.move_form_ffd_row(4,0)
+        #
+        # deformed_surfaces = self.hfcom.active_hull_form.ffd_deform_surfaces()
+        # self.hfcom.active_hull_form._surfaces = deformed_surfaces
+        # self.hfcom.active_hull_form.regenerateHullHorm()
+        #
+        # calc = michell_resitance(self.hfcom.active_hull_form)
+        # data1 = calc.wave_resistance(3.5)
+        # print(data1)
+        #
+        # self.hfcom.active_hull_form.calc_stab()
+        # print(self.hfcom.active_hull_form.displacement,self.hfcom.active_hull_form.displacementCG)
+        #
         # self.hfcom.active_hull_form.visualise_surface()
-        z = points[:, 2]
-        # print(min(z), max(z),self.hfcom.active_hull_form.T)
-        print(self.hfcom.active_hull_form.L, self.hfcom.active_hull_form.H, self.hfcom.active_hull_form.T)
-        sscalc = ShipStability(self.hfcom.active_hull_form, (self.hfcom.active_hull_form.H-10))
-        sscalc.wl.set_plane_point_z(self.hfcom.active_hull_form.T)
-        displacement, displacementCG, new_fvs, new_pts = sscalc.calculate_displacement_and_displacementCG()
-        displacement = displacement
-        print('displacement, m3', displacement)
-        print('displacement, t', displacement)
-        print('displacement CG', displacementCG)
+
+
+
+        # self.hfcom.active_hull_form._surfaces =  cleaned_surfaces
+        # calc = michell_resitance(self.hfcom.active_hull_form, True)
+        # data1 = calc.wave_resistance(3.5)
+        # print(data1)  # (5.357551808216177, 0.0013889292068666674)
+        # self.hfcom.active_hull_form.calc_stab()
+        # print(self.hfcom.active_hull_form.displacement,self.hfcom.active_hull_form.displacementCG)
+
+        # deformed_surfaces = self.hfcom.active_hull_form.ffd_deform_surfaces(cleaned_surfaces)
+
+
+        # self.resist = michell_resitance(hullform)
+        # all_surfaces = hullform._surfaces
+        # cleaned_surfaces = self.resist.mirrored_surfaces
+        # one_side_surfaces = self.resist.one_side_surfaces
+
+
+        # deformed_surfaces = self.hfcom.active_hull_form.ffd_deform_surfaces(cleaned_surfaces)
+        # self.hfcom.active_hull_form.visualise_surface()
+        # self.hfcom.active_hull_form.visualise_surface()
+        # self.emit_geometries_rebuild()
+        # self.opt = form_OptimizationProblem(Hullform = self.hfcom.active_hull_form)
+        # print(self.opt.original_Cw, self.opt.original_displacement ,self.opt.original_displacementCGx)
+        # print(res)
+
+    def on_calc_stab(self):         #zrcalo i stvara novi mesh????
+        self.hfcom.active_hull_form.calc_stab()
+        print(self.hfcom.active_hull_form.displacement, self.hfcom.active_hull_form.displacementCG)
+    #     # points = self.hfcom.active_hull_form.mesh.points()
+    #     # self.hfcom.active_hull_form.visualise_surface()
+    #     # z = points[:, 2]
+    #     # print(min(z), max(z),self.hfcom.active_hull_form.T)
+    #     # print(self.hfcom.active_hull_form.L, self.hfcom.active_hull_form.H, self.hfcom.active_hull_form.T)
+    #     sscalc = ShipStability(self.hfcom.active_hull_form, (self.hfcom.active_hull_form.H-10))
+    #     sscalc.wl.set_plane_point_z(self.hfcom.active_hull_form.T)
+    #     self.displacement, self.displacementCG, new_fvs, new_pts = sscalc.calculate_displacement_and_displacementCG()
+    #     # print('displacement, m3', displacement)
+    #     # print('displacement, t', displacement)
+    #     # print('displacement CG', displacementCG)
 
     def on_calc_resistance(self):
-        calc = michell_resitance(self.hfcom.active_hull_form, 10)
-        print(calc.wave_resistance())
+        calc = michell_resitance(self.hfcom.active_hull_form)
+        # calc.set_new_michell()
+        print(calc.wave_resistance(3.5))
+        # calc.set_old_michell()
+        # print(calc.wave_resistance(3.5))
+        # calc.visualise()
         # print(calc.n_calls)
         # calc.test_intersection()
+
 
     def onCreateFDDBox(self):
         if isinstance(self.hfcom.active_hull_form, OCCHullform):

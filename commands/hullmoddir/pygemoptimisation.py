@@ -1,47 +1,40 @@
 from optbase import *
 from optlib_scipy import ScipyOptimizationAlgorithm
-
+from michell_dir.michell import michell_resitance
 
 #varijable: pomicanje 4 tocke po x i y, treba li po z?
 class form_analysis_model():
-    def __init__(self, Hullform = None):
+    def __init__(self, Hullform = None, optimise_aft = False, speed = 3.5): #speed in knots
         self.Hullform = Hullform
-        box_center = np.array([L/2,B/4,H/2])   #b/4 jer se gleda samo jedna strana
-        box_length = [L,B/2,H]
-        self.Hullform.make_ffd_volume(self, box_center = box_center, n_control_points = box_length, box_rotation_angles = [0,0,0], knots_to_add = [0,0,0])  #treba mi box center i box len
-        self.ffd = self.Hullform._ffd_volumes[0]
+        self.speed = speed
+        knots_to_add = [0, 0, 0]
+        self.Hullform.make_form_ffd_cage(knots_to_add)
+        self.optimise_aft = optimise_aft
+        self.resistance_calc = michell_resitance(self.Hullform)
+        self.Cw = self.resistance_calc.wave_resistance(self.speed)[1]
+        self.original_Cw = copy(self.Cw)
+        self.Hullform.calc_stab()
+        self.original_displacement = copy(self.Hullform.displacement)
+        self.original_displacementCGx = copy(self.Hullform.displacementCG[0])
+        # print(self.qq)
+        self.b_mo_x1 = 0
+        self.b_mo_x2 = 0
+        self.a_mo_x1 = 0
+        self.a_mo_x2 = 0
 
-        # indeksi redova na pramcu:
-        # row1
-        bp1_ind = [4,1,0]
-        bp2_ind = [4,1,1]
-        self.brow1 = [bp1_ind, bp2_ind]     #lista indeksa rowov-a
-        # row2
-        bp3_ind = [5,1,0]
-        bp4_ind = [5,1,1]
-        self.brow2 = [bp3_ind, bp4_ind]
 
-        # indeksi redova na krmi:
-        # row1
-        ap1_ind  = [1,1,0]
-        ap2_ind  = [1,1,1]
-        self.arow1 = [ap1_ind, ap2_ind]
-        # row2
-        ap3_ind  = [2,1,0]
-        ap4_ind  = [2,1,1]
-        self.arow2 = [ap3_ind, ap4_ind]
 
 
     #bow functions:
-    def set_b_mo_x1(self, mo_x):    #ffd displacement of bow row1
+    def set_b_mo_x1(self, mo_x):    #ffd displacement of bow row1, the one closest to 0,0
         self.b_mo_x1 = mo_x
-        for ind in self.brow1:
-            self.ffd.array_mu_x[ind] = self.b_mo_x1
+        # for ind in self.brow1:
+        #     self.ffd.array_mu_x[ind] = self.b_mo_x1
 
-    def set_b_mo_x2(self, mo_x):    #ffd displacement of brow1
+    def set_b_mo_x2(self, mo_x):    #ffd displacement of brow2
         self.b_mo_x2 = mo_x
-        for ind in self.brow2:
-            self.ffd.array_mu_x[ind] = self.b_mo_x2
+        # for ind in self.brow2:
+        #     self.ffd.array_mu_x[ind] = self.b_mo_x2
 
     def get_b_mo_x1(self):
         return self.b_mo_x1
@@ -52,13 +45,13 @@ class form_analysis_model():
     #aft functions
     def set_a_mo_x1(self, mo_x):  # ffd displacement of brow1
         self.a_mo_x1 = mo_x
-        for ind in self.arow1:
-            self.ffd.array_mu_x[ind] = self.a_mo_x1
+        # for ind in self.arow1:
+        #     self.ffd.array_mu_x[ind] = self.a_mo_x1
 
     def set_a_mo_x2(self, mo_x):  # ffd displacement of brow1
         self.a_mo_x2 = mo_x
-        for ind in self.arow2:
-            self.ffd.array_mu_x[ind] = self.a_mo_x2
+        # for ind in self.arow2:
+        #     self.ffd.array_mu_x[ind] = self.a_mo_x2
 
     def get_a_mo_x1(self):
         return self.a_mo_x1
@@ -68,45 +61,72 @@ class form_analysis_model():
 
     # dodaj za y i z ako treba
 
-    # def calc_resistance(self):
-    #     self.resistance = somefunction()
+    def calc_resistance(self):
+        self.Cw = self.resistance_calc.wave_resistance(self.speed)[1]
 
-    
-    # def get_volume(self)
-    #     return volume     #koje su granice volumena?
+    def get_resistance(self):
+        return self.Cw
 
-    #... ostali koeficjenti
+    def get_displacement(self):
+        return self.Hullform.displacement     #koje su granice volumena?
 
-
+    def get_displacementCG_x(self):
+        return self.Hullform.displacementCG[0]
 
 
     def analyze(self):
-        pass
-      # self.calc_resistance()
-      # self.calc_volume()
+        self.Hullform._surfaces = self.Hullform.original_clean_surface    #reset to original surface
+        self.Hullform.move_form_ffd_row(4, self.b_mo_x1)
+        self.Hullform.move_form_ffd_row(5, self.b_mo_x2)
 
 
+        if self.optimise_aft:
+            self.Hullform.move_form_ffd_row(1, self.a_mo_x1)
+            self.Hullform.move_form_ffd_row(2, self.a_mo_x2)
+
+
+        deformed_surfaces = self.Hullform.ffd_deform_surfaces()
+        self.Hullform._surfaces = deformed_surfaces
+        # self.Hullform.visualise_surface()
+        self.Hullform.regenerateHullHorm()
+        self.resistance_calc = michell_resitance(self.Hullform)     #re initialise resist calc with original clean surfaces
+        self.calc_resistance()
+        self.Hullform.calc_stab()
+        print(self.b_mo_x1,self.b_mo_x2)
+        print(self.get_displacement())
+        print(self.get_displacementCG_x())
+        print(self.Cw)
 
 
 class form_OptimizationProblem(OptimizationProblem):
-    def __init__(self,name=''):
+    def __init__(self,Hullform, name='', optimise_aft = False, speed = 3.5):
         if name == '':
             name = 'form'
         super().__init__(name)
-        am = form_analysis_model()
-        b_mo_x1 = DesignVariable('b_mo_x1', CallbackGetSetConnector(am.get_b_mo_x1, am.set_b_mo_x1),0,5)
-        b_mo_x2 = DesignVariable('b_mo_x2', CallbackGetSetConnector(am.get_b_mo_x2, am.set_b_mo_x2),0,5)
+        self.speed = speed
+        am = form_analysis_model(Hullform = Hullform, optimise_aft = optimise_aft, speed = self.speed)
+        self.deform_min = -0.1
+        self.deform_max = 0.1
+
+        b_mo_x1 = DesignVariable('b_mo_x1', CallbackGetSetConnector(am.get_b_mo_x1, am.set_b_mo_x1),self.deform_min,self.deform_max)
+        b_mo_x2 = DesignVariable('b_mo_x2', CallbackGetSetConnector(am.get_b_mo_x2, am.set_b_mo_x2),self.deform_min,self.deform_max)
+        self.add_design_variable(b_mo_x1)
+        self.add_design_variable(b_mo_x2)
+
         #krma  varijable:
-        a_mo_x1 = DesignVariable('a_mo_x1', CallbackGetSetConnector(am.get_a_mo_x1, am.set_a_mo_x1),0,5)
-        a_mo_x2 = DesignVariable('a_mo_x2', CallbackGetSetConnector(am.get_a_mo_x2, am.set_a_mo_x2),0,5)
+        if optimise_aft:
+            a_mo_x1 = DesignVariable('a_mo_x1', CallbackGetSetConnector(am.get_a_mo_x1, am.set_a_mo_x1),self.deform_min,self.deform_max)
+            a_mo_x2 = DesignVariable('a_mo_x2', CallbackGetSetConnector(am.get_a_mo_x2, am.set_a_mo_x2),self.deform_min,self.deform_max)
+            self.add_design_variable(a_mo_x1)
+            self.add_design_variable(a_mo_x2)
 
-        self.add_design_variable(b_mo_x1)
-        self.add_design_variable(b_mo_x1)
-        self.add_design_variable(b_mo_x1)
-        self.add_design_variable(b_mo_x1)
 
-        self.add_objective(DesignObjective('resistance', CallbackGetConnector(am.get_resistance)))
+        self.add_objective(DesignObjective('Cw', CallbackGetConnector(am.get_resistance)))
 
-        self.add_constraint(DesignConstraint('volume_up', CallbackGetConnector(am.get_volume), 25.0, ConstrType.LT))
-        self.add_constraint(DesignConstraint('volume_down', CallbackGetConnector(am.get_volume), 10.0, ConstrType.GT))
+        self.add_constraint(DesignConstraint('displacement_upper', CallbackGetConnector(am.get_displacement), am.original_displacement*1.01 , ConstrType.LT))
+        self.add_constraint(DesignConstraint('displacement_lower', CallbackGetConnector(am.get_displacement), am.original_displacement*0.99, ConstrType.GT))
+
+        self.add_constraint(DesignConstraint('displacementCGx_upper', CallbackGetConnector(am.get_displacementCG_x), am.original_displacementCGx*1.01 , ConstrType.LT))
+        self.add_constraint(DesignConstraint('displacementCGx_lower', CallbackGetConnector(am.get_displacementCG_x), am.original_displacementCGx*0.99, ConstrType.GT))
+
         self.add_analysis_executor(am)

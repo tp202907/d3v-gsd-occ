@@ -3,8 +3,8 @@ import numpy as np
 import openmesh as om
 from pygem.cad import *
 from copy import copy
-
-from OCC.Core.gp import gp_Trsf, gp_Vec
+from sys import maxsize
+from OCC.Core.gp import gp_Trsf, gp_Lin
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.Tesselator import *
@@ -13,7 +13,8 @@ from OCC.Extend.TopologyUtils import *
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
 from OCC.Core.GeomAbs import GeomAbs_BSplineSurface
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeEdge
-
+from hullformdir.shipstability import ShipStability
+from OCC.Core.IntCurvesFace import IntCurvesFace_ShapeIntersector
 from OCC.Core.gp import gp_Pnt, gp_Vec
 from OCC.Core.GeomFill import (
     GeomFill_BSplineCurves,
@@ -187,8 +188,30 @@ class ffd_maker():
         self._ffd_volumes = {}
         self._current_volume_id = 0
 
+    #makes
+    def make_form_ffd_cage(self, knots_to_add = [0,0,0]):
+        self._ffd_volumes = {}  #reset any ffd volumes
+        self._current_volume_id = 0
+
+        box5_dims = np.array([self.L*1.01, self.B*1.01, self.H*1.01])
+        box5_center = np.array([self.ship_start + self.L/2, 0, self.H / 2])
+        self.make_ffd_volume(box5_center, box5_dims, n_control_points= [7,2,2], knots_to_add=knots_to_add)
+
+        # print(self._ffd_volumes)
+
+    def move_form_ffd_row(self,x_ind, mu_x,): #dx is absolute len by which to modify boxes #x_ind is index of row to move 0 is aft, 6 iis bow. mu_x is ffd deformation in x direction.
+        row_indices = [[x_ind,0,0],[x_ind,1,0],[x_ind,0,1],[x_ind,1,1]]
+
+        for ind in row_indices:
+            self.move_ffd_pole(0, ind, [mu_x,0,0])
+            current_ffd_volume = self._ffd_volumes[0]
+            current_ffd_volume.array_mu_x[ind[0], ind[1], ind[2]] = mu_x
+
+
+
     def make_ffd_volume(self, box_center, box_length, n_control_points = [2,2,2], box_rotation_angles = [0,0,0], knots_to_add = [0,0,0]):
         ffd_volume = FFD(n_control_points, knots_to_add[0],knots_to_add[1],knots_to_add[2])
+        # ffd_volume = FFD(n_control_points)
         ffd_volume.box_length = box_length
         ffd_volume.box_origin = (box_center - box_length/2)
         ffd_volume.rot_angle = box_rotation_angles
@@ -198,12 +221,13 @@ class ffd_maker():
 
     def move_ffd_pole(self, ffd_id, pole_id:list, move_vector):
         current_ffd_volume = self._ffd_volumes[ffd_id]
-        # current_ffd_volume.array_mu_x[pole_id[0], pole_id[1], pole_id[2]] = move_vector[0]
-        # current_ffd_volume.array_mu_y[pole_id[0], pole_id[1], pole_id[2]] = move_vector[1]
-        # current_ffd_volume.array_mu_z[pole_id[0], pole_id[1], pole_id[2]] = move_vector[2]
-        current_ffd_volume.array_mu_x[[*pole_id,]] = move_vector[0]
-        current_ffd_volume.array_mu_y[[*pole_id,]] = move_vector[1]
-        current_ffd_volume.array_mu_z[[*pole_id,]] = move_vector[2]
+        # print(dir(current_ffd_volume))
+        current_ffd_volume.array_mu_x[pole_id[0], pole_id[1], pole_id[2]] = move_vector[0]
+        current_ffd_volume.array_mu_y[pole_id[0], pole_id[1], pole_id[2]] = move_vector[1]
+        current_ffd_volume.array_mu_z[pole_id[0], pole_id[1], pole_id[2]] = move_vector[2]
+        # current_ffd_volume.array_mu_x[[*pole_id,]] = move_vector[0]
+        # current_ffd_volume.array_mu_y[[*pole_id,]] = move_vector[1]
+        # current_ffd_volume.array_mu_z[[*pole_id,]] = move_vector[2]
 
     def make_ffd_box_mesh(self, pole_size = 500):    #moza ih ne radi na tocno pravom mjestu pogledaj odakle je origin make_boxa
         pole = make_block(np.array([pole_size,]*3), np.array([0, 0, 0]))
@@ -349,37 +373,49 @@ class PyGemHullform(ffd_maker):
         plt.show()
 
 
-    def visualise_surface(self):
+    def visualise_surface(self, surfaces = None):
         display, start_display, add_menu, add_function_to_menu = init_display()
-        for i in self._surfaces:
-            display.DisplayShape(i, update=True)
+        if surfaces is None:
+            for i in self._surfaces:
+                display.DisplayShape(i, update=True)
+        else:
+            for i in surfaces:
+                display.DisplayShape(i, update=True)
 
+        # for i in self.clean_surfaces:
+        #     display.DisplayShape(i, update=True)
+        # display.DisplayShape(self._clean_surface, update=True)
         # boxes = []
-        # for ffd_volume in self._ffd_volumes.values():
-        #     box_origin = ffd_volume.box_origin
-        #     box_length = ffd_volume.box_length
-        #     point = gp_Pnt(*box_origin)
-        #     box_visualisation = BRepPrimAPI_MakeBox(*([point, ] + box_length.tolist())).Shape()
-        #     # box_visualisation = BRepPrimAPI_MakeBox(point, box_length[0], box_length[1], box_length[2]).Shape()
-        #     boxes.append(box_visualisation)
-        #
+        for ffd_volume in self._ffd_volumes.values():
+            cntpnts = ffd_volume.control_points(False)
+            for cp in cntpnts:
+                point = gp_Pnt(cp[0],cp[1],cp[2])
+                display.DisplayShape(point, update=True)
+                display.DisplayMessage(point, f"U")
+
+        for ffd_volume in self._ffd_volumes.values():
+            cntpnts = ffd_volume.control_points(True)
+            for cp in cntpnts:
+                point = gp_Pnt(cp[0],cp[1],cp[2])
+                display.DisplayShape(point, update=True)
+                display.DisplayMessage(point, f"D")
         # for box in boxes:
         #     display.DisplayShape(box, update=True)
 
         start_display()
 
-    def ffd_deform_surfaces(self):
+    def ffd_deform_surfaces(self,surfaces = None):
         deformed_surfaces = []
-        for surface in self._surfaces:
+        if surfaces is None:
+            surfaces = self._surfaces
+
+        for surface in surfaces:
             for ffd in self._ffd_volumes.values():
                 deformed_surface =  ffd(surface)       #vraca compound?
                 deformed_surface = self.regenerate_surface(deformed_surface)
             deformed_surfaces.append(deformed_surface)
 
-        self._surfaces = deformed_surfaces
-        # self.visualise_surface()
-        self.regenerateHullHorm()
-        # self.visualise_surface()
+        return deformed_surfaces
 
 
     def regenerate_surface(self, surface):
@@ -395,6 +431,39 @@ class PyGemHullform(ffd_maker):
         bsrf = surf.BSpline()
         face = make_face(bsrf, 1e-6)
         return face
+
+    def calc_stab(self):
+        sscalc = ShipStability(self, self.H - 0.05)
+        sscalc.wl.set_plane_point_z(self.T)
+        self.displacement, self.displacementCG, new_fvs, new_pts = sscalc.calculate_displacement_and_displacementCG()
+        # print('displacement, m3', displacement)
+        # print('displacement, t', displacement)
+        # print('displacement CG', displacementCG)
+
+    def remove_form_deck_and_aft(self, remove_top_deck = True, remove_aft_surface = False):
+        # makni zrcalo i palubu
+        ray_origin = gp_Pnt(self.ship_start + self.L / 2, 0, self.H - 0.01)
+        ray_dir_zpos = gp_Dir(0, 0, 1)
+        ray_dir_xneg = gp_Dir(-1, 0, 0)
+        ray_zpos = gp_Lin(ray_origin, ray_dir_zpos)
+        ray_xneg = gp_Lin(ray_origin, ray_dir_xneg)
+        surfs = []
+        # clean surface:
+        for face in self._surfaces:
+            intersector = IntCurvesFace_ShapeIntersector()
+            intersector.Load(face, 1e-6)
+            if remove_top_deck:
+                intersector.Perform(ray_zpos, 0, maxsize)  # check if surface is deck, if is, skip face
+                # print(intersector.IsDone() and intersector.NbPnt() > 0)
+                if intersector.IsDone() and intersector.NbPnt() > 0:
+                    continue
+            if remove_aft_surface:
+                intersector.Perform(ray_xneg, 0, maxsize)  # check if surface is zrcalo, if is, skip face
+                if intersector.IsDone() and intersector.NbPnt() > 0:
+                    continue
+
+            surfs.append(face)
+            self._surfaces = surfs
 
 
 if __name__ == "__main__":

@@ -98,10 +98,19 @@ class OCCHullform(HullForm, PyGemHullform):
             self._surfaces = occ_entities[1]
             self._curves = occ_entities[0]
             self._original_surfaces = copy(self._surfaces)
+        self.original_surface = copy(self._surfaces)
         self.regenerateHullHorm()
         self.calc_ship_dims()
-        # self.position_form(x_offset = 0.1)
-        # self.position_form(x_offset = 0)
+        self.remove_form_deck_and_aft()
+        self.original_clean_surface = copy(self._surfaces)
+        self.regenerateHullHorm()     #0.1774759566343617 [-2.90100475e-04  6.50250257e-07  1.56310393e-01]
+        self.T = 0.25   #draft
+        self.calc_stab()
+
+
+
+
+
         # self.matplotlib_visualise_mesh()
         # self.calc_ship_dims()
 
@@ -113,16 +122,17 @@ class OCCHullform(HullForm, PyGemHullform):
         # self.visualise_surface()
 
     def calc_ship_dims(self):   #uses the mesh to find min and max points on x,y and z, used for testing
-        points = self.mesh.points()
-        x = points[:,0]
-        y = points[:,1]
-        z = points[:,2]
+        # points = self.mesh.points()
+        # x = points[:,0]
+        # y = points[:,1]
+        # z = points[:,2]
+        # print(self.H)
         # print(f"min x point :{np.min(x)}, min z point: {np.min(z)}")
-        self.L = (np.max(x) - np.min(x)) #/1000      #convert to meters
-        self.B = (np.max(y) - np.min(y)) #/1000
-        self.H = (np.max(z) - np.min(z)) #/ 1000
-        self.T = self.H * 0.75 #/ 1000   #0.75 je procijena gaza
-        print(self.bbox.minCoord,self.bbox.maxCoord)
+        self.ship_start = self.bbox.minCoord[0]
+        self.L = self.bbox.maxCoord[0] - self.bbox.minCoord[0]
+        self.B = (self.bbox.maxCoord[1] - self.bbox.minCoord[1])
+        self.H = self.bbox.maxCoord[2] - self.bbox.minCoord[2]
+        # print(self.bbox.maxCoord, self.bbox.minCoord, self.H)
 
     def new_coords_x(self):
         return occhm.lackenby(self._surfaces[0], delta_cp=0.15, delta_p=0.2, station_starts='aft')
@@ -176,6 +186,17 @@ class OCCHullform(HullForm, PyGemHullform):
             if n_surfaces > 1:  #n of meshes and n of surfaces is the same
                 self.mesh = soft_merge_meshes(meshes)
             # self.miror_mesh_around_simetry_plan()
+
+    def reconstruct_faces(self):
+        reconstructed_faces = []
+        for face in self._surfaces:
+            surf = BRepAdaptor_Surface(face, True)
+            bsrf = surf.BSpline()
+            # print("UDegree:", bsrf.UDegree())
+            # print("VDegree:", bsrf.VDegree())
+            face = make_face(bsrf, 1e-6)
+            reconstructed_faces.append(face)
+        self._surfaces = reconstructed_faces
 
         # mesh = self.mesh
         # points = mesh.points()
