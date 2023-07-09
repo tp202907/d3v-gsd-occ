@@ -208,7 +208,6 @@ class ffd_maker():
             current_ffd_volume.array_mu_x[ind[0], ind[1], ind[2]] = mu_x
 
 
-
     def make_ffd_volume(self, box_center, box_length, n_control_points = [2,2,2], box_rotation_angles = [0,0,0], knots_to_add = [0,0,0]):
         ffd_volume = FFD(n_control_points, knots_to_add[0],knots_to_add[1],knots_to_add[2])
         # ffd_volume = FFD(n_control_points)

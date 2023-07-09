@@ -17,10 +17,10 @@ class form_analysis_model():
         self.original_displacement = copy(self.Hullform.displacement)
         self.original_displacementCGx = copy(self.Hullform.displacementCG[0])
         # print(self.qq)
-        self.b_mo_x1 = 0
-        self.b_mo_x2 = 0
-        self.a_mo_x1 = 0
-        self.a_mo_x2 = 0
+        self.b_mo_x1 = 0.1
+        self.b_mo_x2 = 0.1
+        self.a_mo_x1 = -0.1
+        self.a_mo_x2 = -0.1
 
 
 
@@ -92,14 +92,14 @@ class form_analysis_model():
         self.resistance_calc = michell_resitance(self.Hullform)     #re initialise resist calc with original clean surfaces
         self.calc_resistance()
         self.Hullform.calc_stab()
-        print(self.b_mo_x1,self.b_mo_x2)
+        print(self.get_b_mo_x1(),self.get_b_mo_x2(),self.get_a_mo_x1(),self.get_a_mo_x2())
         print(self.get_displacement())
         print(self.get_displacementCG_x())
-        print(self.Cw)
-
+        print(self.get_resistance())
+        return AnalysisResultType.OK
 
 class form_OptimizationProblem(OptimizationProblem):
-    def __init__(self,Hullform, name='', optimise_aft = False, speed = 3.5):
+    def __init__(self,Hullform, name='', optimise_aft = True, speed = 3.5):
         if name == '':
             name = 'form'
         super().__init__(name)
@@ -123,10 +123,10 @@ class form_OptimizationProblem(OptimizationProblem):
 
         self.add_objective(DesignObjective('Cw', CallbackGetConnector(am.get_resistance)))
 
-        self.add_constraint(DesignConstraint('displacement_upper', CallbackGetConnector(am.get_displacement), am.original_displacement*1.01 , ConstrType.LT))
-        self.add_constraint(DesignConstraint('displacement_lower', CallbackGetConnector(am.get_displacement), am.original_displacement*0.99, ConstrType.GT))
+        self.add_constraint(DesignConstraint('displacement_upper', CallbackGetConnector(am.get_displacement), am.original_displacement*1.1 , ConstrType.LT))
+        self.add_constraint(DesignConstraint('displacement_lower', CallbackGetConnector(am.get_displacement), am.original_displacement*0.9, ConstrType.GT))
 
-        self.add_constraint(DesignConstraint('displacementCGx_upper', CallbackGetConnector(am.get_displacementCG_x), am.original_displacementCGx*1.01 , ConstrType.LT))
-        self.add_constraint(DesignConstraint('displacementCGx_lower', CallbackGetConnector(am.get_displacementCG_x), am.original_displacementCGx*0.99, ConstrType.GT))
+        self.add_constraint(DesignConstraint('displacementCGx_upper', CallbackGetConnector(am.get_displacementCG_x), am.original_displacementCGx*1.1 , ConstrType.LT))
+        self.add_constraint(DesignConstraint('displacementCGx_lower', CallbackGetConnector(am.get_displacementCG_x), am.original_displacementCGx*0.9, ConstrType.GT))
 
         self.add_analysis_executor(am)

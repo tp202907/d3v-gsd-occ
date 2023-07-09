@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QApplication, QMenu, QWidget
 from PySide6.QtWidgets import QMenuBar
 from hullformdir.shipstability import ShipStability
 from optlib_scipy import ScipyOptimizationAlgorithm
+from optlib_pymoo_proto import PymooOptimizationAlgorithmSingle
 try:
     # d3v imports
     from signals import Signals
@@ -111,18 +112,56 @@ class HullmodCommand(Command):
     #
 
     def on_Opt_Form(self):
-        self.opt = form_OptimizationProblem(Hullform=self.hfcom.active_hull_form)
+        self.opt = form_OptimizationProblem(Hullform=self.hfcom.active_hull_form, speed = 3.653)
         #
-        opt_ctrl = {}
-        self.opt.opt_algorithm = ScipyOptimizationAlgorithm('SLSQP_mi=1000', 'SLSQP', opt_ctrl)
-        res = self.opt.optimize()
+
+
+        #
+        # opt_ctrl = {}
+        # self.opt.opt_algorithm = ScipyOptimizationAlgorithm('SLSQP_mi=1000', 'SLSQP', opt_ctrl)
+        # res = self.opt.optimize()
+
+        pop_size = 50
+        num_iter = 25
+        max_evaluations = pop_size * num_iter
+        mutation = {'name': 'real_pm', 'eta': 20, 'prob': 0.1}  # Check
+        crossover = {'name': 'real_sbx', 'eta': 20, 'prob': 0.95}  # Check
+        termination = ('n_eval', max_evaluations)
+        alg_ctrl = {'pop_size': pop_size, 'n_offsprings': pop_size, 'mutation': mutation, 'crossover': crossover,
+                    'termination': termination}
+
+        ga_ctrl = {'pop_size': pop_size, 'termination': termination}
+        self.opt .opt_algorithm = PymooOptimizationAlgorithmSingle('ga_default', 'ga', alg_ctrl=ga_ctrl)
+        sol = self.opt .optimize()
+        self.opt .print_output()
+
+
+
+        # termination = ('n_eval', 200)
+        # nm_ctrl = {'termination': termination}
+        # self.opt.opt_algorithm = PymooOptimizationAlgorithmSingle('nelder-mead_default', 'nelder-mead', alg_ctrl=nm_ctrl)
+        # res = self.opt.optimize()
+
+
         self.opt.print_output()
         self.hfcom.active_hull_form.visualise_surface()
 
 
+
+
+
+
+        # print(f"b_mo_x1 = {self.opt.am.get_b_mo_x1()}, b_mo_x2 = {self.opt.am.get_b_mo_x2()}, Cw = {self.opt.am.get_resistance()}")
+
+        # 4       5
+        # b_mo_x1, b_mo_x2, Cw
+        # -0.099786, -0.100000, nan
+
+
+
         # hullform = self.hfcom.active_hull_form
         # calc = michell_resitance(self.hfcom.active_hull_form)
-        # data1 = calc.wave_resistance(3.5)
+        # data1 = calc.wave_resistance(3.653)
         # print(data1)                                                                                    #(5.357551808216177, 0.0013889292068666674)
         # #                                                                                         # 0.17743882099421268 [-4.58088043e-04  2.34463456e-05  1.56304175e-01]
         # self.hfcom.active_hull_form.calc_stab()
@@ -130,15 +169,15 @@ class HullmodCommand(Command):
         #
         #
         # hullform.make_form_ffd_cage([0,0,0])
-        # hullform.move_form_ffd_row(5,0)
-        # hullform.move_form_ffd_row(4,0)
-        #
+        # hullform.move_form_ffd_row(5,-0.100000)
+        # hullform.move_form_ffd_row(4,-0.099786)
+        # #
         # deformed_surfaces = self.hfcom.active_hull_form.ffd_deform_surfaces()
         # self.hfcom.active_hull_form._surfaces = deformed_surfaces
         # self.hfcom.active_hull_form.regenerateHullHorm()
         #
         # calc = michell_resitance(self.hfcom.active_hull_form)
-        # data1 = calc.wave_resistance(3.5)
+        # data1 = calc.wave_resistance(3.653)
         # print(data1)
         #
         # self.hfcom.active_hull_form.calc_stab()

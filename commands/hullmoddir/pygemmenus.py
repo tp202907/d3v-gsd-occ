@@ -226,6 +226,7 @@ class DeformFFDBox_menu(QWidget):
         self.Hullform.ffd_deform_surfaces()
         self._current_id = memory_id
         self.add_mesh_and_surface()
+        # self.Hullform.emit_geometries_rebuild()
 
     def on_reset_button_clicked(self):      #return surfaces and mesh to original value
         self.set_mesh_and_surface(0)    #sets mesh and surfaces to id 0 which is the original
