@@ -1,6 +1,6 @@
 from optbase import *
 from optlib_scipy import ScipyOptimizationAlgorithm
-from michell_dir.michell import michell_resitance
+from hullmoddir.michell_adaptor import michell_resitance
 
 #varijable: pomicanje 4 tocke po x i y, treba li po z?
 class form_analysis_model():
@@ -21,7 +21,11 @@ class form_analysis_model():
         self.b_mo_x2 = 0.1
         self.a_mo_x1 = -0.1
         self.a_mo_x2 = -0.1
-
+        print("start:")
+        print(self.get_b_mo_x1(),self.get_b_mo_x2(),self.get_a_mo_x1(),self.get_a_mo_x2())
+        print(self.get_displacement())
+        print(self.get_displacementCG_x())
+        print(self.get_resistance())
 
 
 
@@ -123,10 +127,12 @@ class form_OptimizationProblem(OptimizationProblem):
 
         self.add_objective(DesignObjective('Cw', CallbackGetConnector(am.get_resistance)))
 
-        self.add_constraint(DesignConstraint('displacement_upper', CallbackGetConnector(am.get_displacement), am.original_displacement*1.1 , ConstrType.LT))
-        self.add_constraint(DesignConstraint('displacement_lower', CallbackGetConnector(am.get_displacement), am.original_displacement*0.9, ConstrType.GT))
+        self.add_constraint(DesignConstraint('displacement_upper', CallbackGetConnector(am.get_displacement), am.original_displacement*1.02 , ConstrType.LT))
+        self.add_constraint(DesignConstraint('displacement_lower', CallbackGetConnector(am.get_displacement), am.original_displacement*0.98, ConstrType.GT))
 
-        self.add_constraint(DesignConstraint('displacementCGx_upper', CallbackGetConnector(am.get_displacementCG_x), am.original_displacementCGx*1.1 , ConstrType.LT))
-        self.add_constraint(DesignConstraint('displacementCGx_lower', CallbackGetConnector(am.get_displacementCG_x), am.original_displacementCGx*0.9, ConstrType.GT))
+        # self.add_constraint(DesignConstraint('displacementCGx_upper', CallbackGetConnector(am.get_displacementCG_x), am.original_displacementCGx*1.4 , ConstrType.LT))
+        # self.add_constraint(DesignConstraint('displacementCGx_lower', CallbackGetConnector(am.get_displacementCG_x), am.original_displacementCGx*0.6, ConstrType.GT))
+        # self.add_constraint(DesignConstraint('displacementCGx_upper', CallbackGetConnector(am.get_displacementCG_x), 0.02 , ConstrType.LT))
+        # self.add_constraint(DesignConstraint('displacementCGx_lower', CallbackGetConnector(am.get_displacementCG_x), -0.02, ConstrType.GT))
 
         self.add_analysis_executor(am)

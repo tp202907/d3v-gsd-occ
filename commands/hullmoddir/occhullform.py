@@ -98,6 +98,7 @@ class OCCHullform(HullForm, PyGemHullform):
             self._surfaces = occ_entities[1]
             self._curves = occ_entities[0]
             self._original_surfaces = copy(self._surfaces)
+        self.ffd_volume_mesh = []
         self.original_surface = copy(self._surfaces)
         self.regenerateHullHorm()
         self.calc_ship_dims()
@@ -185,6 +186,8 @@ class OCCHullform(HullForm, PyGemHullform):
                 meshes.append(get_open_mesh_from_TopoDS_using_shape_tesselator(surf, mesh_quality=0.1))
             if n_surfaces > 1:  #n of meshes and n of surfaces is the same
                 self.mesh = soft_merge_meshes(meshes)
+
+            # self.mesh = soft_merge_meshes([self.mesh,] + self.ffd_volume_mesh)
             # self.miror_mesh_around_simetry_plan()
 
     def reconstruct_faces(self):

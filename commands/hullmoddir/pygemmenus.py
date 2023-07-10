@@ -3,7 +3,7 @@ from numpy import array
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent
 from copy import copy
-
+from hullmoddir.pygemhullform import soft_merge_meshes
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -52,10 +52,10 @@ class CreateFFDBox_menu(QWidget):
         #box_center = np.array([50000, 6000, 3000]), box_length = np.array([5000, 5000, 5000]), n_control_points = [3, 3,3]
 
         self.FFD_Box_center_label = QLabel("Set FFD Box center:")
-        self.FFD_Box_center_input = QLineEdit("50000, 6000, 3000")        #self.lineedit.setPlaceholderText()
+        self.FFD_Box_center_input = QLineEdit("50, 6, 3")        #self.lineedit.setPlaceholderText()
 
         self.FFD_Box_dims_label = QLabel("Set FFD Box dimensions:")
-        self.FFD_Box_dims_input = QLineEdit("5000, 5000, 5000")
+        self.FFD_Box_dims_input = QLineEdit("5, 5, 5")
 
         self.FFD_Box_ncontrol_label = QLabel("Set numbers of FFD box control points:")
         self.FFD_Box_ncontrol_input = QLineEdit("2, 2, 2")
@@ -175,8 +175,8 @@ class DeformFFDBox_menu(QWidget):
         self.debug_button = QPushButton("Debug")
 
         #adding widgets to window
-        self.layout.addWidget(self.active_deformation_check_label)
-        self.layout.addWidget(self.active_deformation_checkbox)
+        # self.layout.addWidget(self.active_deformation_check_label)
+        # self.layout.addWidget(self.active_deformation_checkbox)
 
 
         self.layout.addWidget(self.Guide_label)
@@ -189,12 +189,12 @@ class DeformFFDBox_menu(QWidget):
         self.layout.addWidget(self.Deformation_slider_z_label)
         self.layout.addWidget(self.Deformation_slider_z)
         self.layout.addWidget(self.deform_button)
-        self.layout.addWidget(self.undo_button)
-        self.layout.addWidget(self.redo_button)
-        self.layout.addWidget(self.reset_button)
+        # self.layout.addWidget(self.undo_button)
+        # self.layout.addWidget(self.redo_button)
+        # self.layout.addWidget(self.reset_button)
         self.layout.addWidget(self.done_button)
         self.layout.addWidget(self.cancel_button)
-        self.layout.addWidget(self.debug_button)
+        # self.layout.addWidget(self.debug_button)
 
         #connect signals:
         self.active_deformation_checkbox.stateChanged.connect(self.on_checkbox_toggle)
@@ -222,8 +222,14 @@ class DeformFFDBox_menu(QWidget):
         memory_id = copy(self._current_id)
         self.set_mesh_and_surface(0)
         self.Hullform.move_ffd_pole(ffd_id = 0, pole_id = self._cpoint_id, move_vector = move_vector)       #kasnije promijeni ffd_id, ovo je samo za test
-        self.Hullform.make_ffd_box_mesh()
-        self.Hullform.ffd_deform_surfaces()
+        self.Hullform._surfaces = self.Hullform.ffd_deform_surfaces()
+        self.Hullform.regenerateHullHorm()
+        self.Hullform.emit_geometries_rebuild()
+        # self.Hullform.make_ffd_box_mesh()
+        self.Hullform.mesh = soft_merge_meshes(self.Hullform.ffd_volume_mesh+[self.Hullform.mesh,])
+        # print(self.mesh)
+        self.Hullform.emit_geometries_rebuild()
+
         self._current_id = memory_id
         self.add_mesh_and_surface()
         # self.Hullform.emit_geometries_rebuild()

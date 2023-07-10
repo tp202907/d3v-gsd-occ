@@ -28,7 +28,7 @@ try:
     # pygem
     from hullmoddir.pygemmenus import CreateFFDBox_menu, DeformFFDBox_menu
     from hullmoddir.pygemoptimisation import form_OptimizationProblem
-    from michell_dir.michell import michell_resitance
+    from hullmoddir.michell_adaptor import michell_resitance
 
 except BaseException as error:
     print('An exception occurred: {}'.format(error))
@@ -112,17 +112,35 @@ class HullmodCommand(Command):
     #
 
     def on_Opt_Form(self):
+        hullform = Hullform=self.hfcom.active_hull_form
+        # hullform.make_form_ffd_cage()
+        # b_mo_x1 = -0.08     #(5.448830322307228, 0.0014125928873533454) sa deformacijom
+        #                     #(5.333900103138104, 0.0013827975733984193) bez deformacije
+        # b_mo_x2 = 0.08
+        # hullform.move_form_ffd_row(4, b_mo_x1)
+        # hullform.move_form_ffd_row(5, b_mo_x2)
+        # deformed_surfaces = hullform.ffd_deform_surfaces()
+        # hullform._surfaces = deformed_surfaces
+
+        # resistance_calc = michell_resitance(hullform)
+        # Cw = resistance_calc.wave_resistance(3.5)
+        # print(Cw)
+
+        # hullform.ffd_volume_mesh = []
         self.opt = form_OptimizationProblem(Hullform=self.hfcom.active_hull_form, speed = 3.653)
-        #
+        # self.opt = form_OptimizationProblem(Hullform=hullform, optimise_aft = True, speed = 3.45)
+
+        # b_mo_x1, b_mo_x2, a_mo_x1, a_mo_x2, Cw, displacement_upper, displacementCGx_upper
+        # -0.100000, -0.100000, 0.100000, 0.100000, 0.000333, 0.153981, -0.001428
 
 
         #
         # opt_ctrl = {}
         # self.opt.opt_algorithm = ScipyOptimizationAlgorithm('SLSQP_mi=1000', 'SLSQP', opt_ctrl)
         # res = self.opt.optimize()
-
-        pop_size = 50
-        num_iter = 25
+        #
+        pop_size = 15   #30
+        num_iter = 20   #30
         max_evaluations = pop_size * num_iter
         mutation = {'name': 'real_pm', 'eta': 20, 'prob': 0.1}  # Check
         crossover = {'name': 'real_sbx', 'eta': 20, 'prob': 0.95}  # Check
@@ -144,7 +162,7 @@ class HullmodCommand(Command):
 
 
         self.opt.print_output()
-        self.hfcom.active_hull_form.visualise_surface()
+        hullform.active_hull_form.visualise_surface()
 
 
 

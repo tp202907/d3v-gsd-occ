@@ -228,23 +228,23 @@ class ffd_maker():
         # current_ffd_volume.array_mu_y[[*pole_id,]] = move_vector[1]
         # current_ffd_volume.array_mu_z[[*pole_id,]] = move_vector[2]
 
-    def make_ffd_box_mesh(self, pole_size = 500):    #moza ih ne radi na tocno pravom mjestu pogledaj odakle je origin make_boxa
+    def make_ffd_box_mesh(self):    #moza ih ne radi na tocno pravom mjestu pogledaj odakle je origin make_boxa
+        pole_size = self.B/12
         pole = make_block(np.array([pole_size,]*3), np.array([0, 0, 0]))
-        ffd_meshes = {}
-        test_visualisation = []
+        self.ffd_volume_mesh = []      # reset box mesh
         for ffd_id, ffd_volume in self._ffd_volumes.items():
             ffd_control_points = ffd_volume.control_points().tolist()
-            ffd_meshes = []
 
             for cpoint in ffd_control_points:
                 pole_mesh = copy(pole)
                 pole_mesh = move_mesh(pole_mesh, cpoint)
-                ffd_meshes.append(pole_mesh)
-                test_visualisation.append(pole_mesh)
-            ffd_meshes[ffd_id] = ffd_meshes
+                self.ffd_volume_mesh.append(pole_mesh)
 
-        self.mesh = soft_merge_meshes(test_visualisation+[self.mesh,])
 
+        # self.regenerateHullHorm()
+        self.mesh = soft_merge_meshes(self.ffd_volume_mesh+[self.mesh,])
+        # print(self.mesh)
+        self.emit_geometries_rebuild()
 
 class PyGemHullform(ffd_maker):
     def __init__(self):
